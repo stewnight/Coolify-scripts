@@ -1,71 +1,107 @@
-version: '3.8'
-
 services:
   librechat:
     image: 'ghcr.io/danny-avila/librechat-dev:latest'
     restart: always
-    user: '${UID:-1000}:${GID:-1000}'
+    user: '1000:1000'
     environment:
-      - HOST=0.0.0.0
-      - PORT=3080
-      - DOMAIN_CLIENT={{DOMAIN_CLIENT}}
-      - DOMAIN_SERVER={{DOMAIN_SERVER}}
-      - MONGO_URI=mongodb://mongodb:27017/LibreChat
-      - MEILI_HOST=http://meilisearch:7700
-      - MEILI_MASTER_KEY={{SERVICE_PASSWORD_MEILI_MASTER_KEY}}
-      - RAG_PORT=8000
-      - RAG_API_URL=http://rag_api:8000
-      - JWT_SECRET={{SERVICE_PASSWORD_JWT_SECRET}}
-      - JWT_REFRESH_SECRET={{SERVICE_PASSWORD_JWT_REFRESH_SECRET}}
-      - ALLOW_EMAIL_LOGIN={{ALLOW_EMAIL_LOGIN:-true}}
-      - ALLOW_REGISTRATION={{ALLOW_REGISTRATION:-true}}
-      - ALLOW_SOCIAL_LOGIN={{ALLOW_SOCIAL_LOGIN:-false}}
-      - ALLOW_SOCIAL_REGISTRATION={{ALLOW_SOCIAL_REGISTRATION:-false}}
-      - ALLOW_PASSWORD_RESET={{ALLOW_PASSWORD_RESET:-false}}
-      - ALLOW_UNVERIFIED_EMAIL_LOGIN={{ALLOW_UNVERIFIED_EMAIL_LOGIN:-true}}
-      - SEARCH=true
-      - APP_TITLE={{APP_TITLE:-LibreChat}}
-      - OPENAI_API_KEY={{OPENAI_API_KEY:-user_provided}}
-      - ANTHROPIC_API_KEY={{ANTHROPIC_API_KEY:-user_provided}}
-      - GOOGLE_KEY={{GOOGLE_KEY:-user_provided}}
-      - BINGAI_TOKEN={{BINGAI_TOKEN:-user_provided}}
+      - 'HOST=0.0.0.0'
+      - 'PORT=3080'
+      - 'SERVICE_FQDN_LIBRECHAT_3080'
+      - 'DOMAIN_CLIENT=${SERVICE_URL_LIBRECHAT}'
+      - 'DOMAIN_SERVER=${SERVICE_URL_LIBRECHAT}'
+      - 'MONGO_URI=mongodb://mongodb:27017/LibreChat'
+      - 'MEILI_HOST=http://meilisearch:7700'
+      - 'MEILI_NO_ANALYTICS=true'
+      - 'MEILI_MASTER_KEY=${SERVICE_PASSWORD_MEILI}'
+      - 'RAG_PORT=8000'
+      - 'RAG_API_URL=http://rag_api:8000'
+      - 'DEBUG_LOGGING=true'
+      - 'NO_INDEX=true'
+      - 'JWT_SECRET=${SERVICE_PASSWORD_JWT}'
+      - 'JWT_REFRESH_SECRET=${SERVICE_PASSWORD_JWT_REFRESH}'
+      - 'CREDS_KEY=${SERVICE_PASSWORD_CREDS_KEY}'
+      - 'CREDS_IV=${SERVICE_PASSWORD_CREDS_IV}'
+      - 'ALLOW_EMAIL_LOGIN=${SERVICE_SETTING_EMAIL_LOGIN:-true}'
+      - 'ALLOW_REGISTRATION=${SERVICE_SETTING_REGISTRATION:-true}'
+      - 'ALLOW_SOCIAL_LOGIN=${SERVICE_SETTING_SOCIAL_LOGIN:-false}'
+      - 'ALLOW_SOCIAL_REGISTRATION=${SERVICE_SETTING_SOCIAL_REGISTRATION:-false}'
+      - 'ALLOW_PASSWORD_RESET=${SERVICE_SETTING_PASSWORD_RESET:-false}'
+      - 'ALLOW_UNVERIFIED_EMAIL_LOGIN=${SERVICE_SETTING_UNVERIFIED_EMAIL:-true}'
+      - 'APP_TITLE=${SERVICE_SETTING_APP_TITLE:-LibreChat}'
+      - 'OPENAI_API_KEY=${SERVICE_SETTING_OPENAI_KEY:-user_provided}'
+      - 'ANTHROPIC_API_KEY=${SERVICE_SETTING_ANTHROPIC_KEY:-user_provided}'
+      - 'GOOGLE_KEY=${SERVICE_SETTING_GOOGLE_KEY:-user_provided}'
+      - 'BINGAI_TOKEN=${SERVICE_SETTING_BING_TOKEN:-user_provided}'
+      - 'ASSISTANTS_API_KEY=${SERVICE_SETTING_ASSISTANTS_KEY:-user_provided}'
+      - 'MISTRAL_API_KEY=${SERVICE_SETTING_MISTRAL_KEY:-user_provided}'
+      - 'GROQ_API_KEY=${SERVICE_SETTING_GROQ_KEY:-user_provided}'
+      - 'PERPLEXITY_API_KEY=${SERVICE_SETTING_PERPLEXITY_KEY:-user_provided}'
+      - 'ANYSCALE_API_KEY=${SERVICE_SETTING_ANYSCALE_KEY:-user_provided}'
+      - 'TOGETHERAI_API_KEY=${SERVICE_SETTING_TOGETHER_KEY:-user_provided}'
+      - 'DEEPSEEK_API_KEY=${SERVICE_SETTING_DEEPSEEK_KEY:-user_provided}'
     volumes:
       - librechat-api-images:/app/client/public/images
       - librechat-api-logs:/app/api/logs
     labels:
+      - coolify.managed=true
+      - coolify.type=application
       - coolify.backup=true
+    healthcheck:
+      test: ['CMD', 'wget', '--spider', 'http://localhost:3080/health']
+      interval: 10s
+      timeout: 5s
+      retries: 3
 
   mongodb:
-    image: 'mongo:6.0'
+    image: 'docker.io/bitnami/mongodb:5.0'
     restart: always
     environment:
-      - MONGO_INITDB_ROOT_USERNAME={{SERVICE_USER_MONGO}}
-      - MONGO_INITDB_ROOT_PASSWORD={{SERVICE_PASSWORD_MONGO}}
+      - MONGODB_REPLICA_SET_MODE=primary
+      - MONGODB_REPLICA_SET_NAME=rs0
+      - MONGODB_PORT_NUMBER=27017
+      - MONGODB_INITIAL_PRIMARY_HOST=mongodb
+      - MONGODB_INITIAL_PRIMARY_PORT_NUMBER=27017
+      - MONGODB_ADVERTISED_HOSTNAME=mongodb
+      - MONGODB_ENABLE_JOURNAL=true
+      - ALLOW_EMPTY_PASSWORD=yes
     volumes:
-      - mongodb-data:/data/db
+      - mongodb-data:/bitnami/mongodb
     healthcheck:
-      test: ['CMD', 'mongo', '--eval', "db.runCommand('ping').ok"]
+      test:
+        [
+          'CMD',
+          'echo',
+          "'db.stats().ok'",
+          '|',
+          'mongo',
+          'localhost:27017/test',
+          '--quiet',
+        ]
       interval: 5s
       timeout: 10s
       retries: 3
     labels:
+      - coolify.managed=true
+      - coolify.type=database
       - coolify.backup=true
 
   meilisearch:
     image: 'getmeili/meilisearch:latest'
     restart: always
     environment:
-      - MEILI_NO_ANALYTICS={{MEILI_NO_ANALYTICS:-true}}
+      - MEILI_NO_ANALYTICS=true
       - MEILI_ENV=production
-      - MEILI_MASTER_KEY={{SERVICE_PASSWORD_MEILI_MASTER_KEY}}
+      - MEILI_MASTER_KEY=${SERVICE_PASSWORD_MEILI}
     volumes:
       - meilisearch-data:/meili_data
     healthcheck:
-      test: ['CMD', 'curl', '-f', 'http://127.0.0.1:7700/health']
+      test: ['CMD', 'wget', '--spider', 'http://localhost:7700/health']
       interval: 5s
       timeout: 10s
       retries: 3
     labels:
+      - coolify.managed=true
+      - coolify.type=search
       - coolify.backup=true
 
   vectordb:
@@ -73,27 +109,38 @@ services:
     restart: always
     environment:
       - POSTGRES_DB=vectordb
-      - POSTGRES_USER={{SERVICE_USER_POSTGRES}}
-      - POSTGRES_PASSWORD={{SERVICE_PASSWORD_POSTGRES}}
+      - POSTGRES_USER=${SERVICE_USER_POSTGRES}
+      - POSTGRES_PASSWORD=${SERVICE_PASSWORD_POSTGRES}
     volumes:
       - pgdata2:/var/lib/postgresql/data
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U {{SERVICE_USER_POSTGRES}} -d vectordb']
+      test: ['CMD-SHELL', 'pg_isready -U ${SERVICE_USER_POSTGRES} -d vectordb']
       interval: 5s
       timeout: 10s
       retries: 3
     labels:
+      - coolify.managed=true
+      - coolify.type=database
       - coolify.backup=true
 
   rag_api:
     image: 'ghcr.io/danny-avila/librechat-rag-api-dev-lite:latest'
     restart: always
     depends_on:
-      - vectordb
+      vectordb:
+        condition: service_healthy
     environment:
       - DB_HOST=vectordb
       - RAG_PORT=8000
-      - OPENAI_API_KEY={{OPENAI_API_KEY:-user_provided}}
+      - OPENAI_API_KEY=${SERVICE_SETTING_OPENAI_KEY:-user_provided}
+    labels:
+      - coolify.managed=true
+      - coolify.type=application
+    healthcheck:
+      test: ['CMD', 'wget', '--spider', 'http://localhost:8000/health']
+      interval: 10s
+      timeout: 5s
+      retries: 3
 
 volumes:
   librechat-api-images:
