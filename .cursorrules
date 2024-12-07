@@ -1,0 +1,52 @@
+{
+  "rules": [
+    {
+      "name": "compose_file_structure",
+      "description": "Standard structure for Coolify compose files",
+      "pattern": {
+        "services": {
+          "required_labels": [
+            "coolify.managed=true",
+            "coolify.type=application"
+          ],
+          "recommended_sections": [
+            "environment",
+            "volumes",
+            "healthcheck",
+            "depends_on"
+          ]
+        }
+      }
+    },
+    {
+      "name": "environment_variables",
+      "description": "Use Coolify UI variables pattern",
+      "pattern": "${VARIABLE_NAME}"
+    },
+    {
+      "name": "security_checks",
+      "description": "Prevent sensitive data in compose files",
+      "forbidden_patterns": [
+        "password=",
+        "secret=",
+        "key="
+      ]
+    },
+    {
+      "name": "documentation",
+      "description": "Required documentation sections",
+      "required_sections": [
+        "Prerequisites",
+        "Configuration",
+        "Environment Variables",
+        "Volumes",
+        "Networking"
+      ]
+    }
+  ],
+  "file_patterns": {
+    "compose_files": "**/*.docker-compose.yml",
+    "documentation": "**/*.md",
+    "environment": "**/*.env.example"
+  }
+}
