@@ -7,21 +7,82 @@
         "services": {
           "required_labels": [
             "coolify.managed=true",
-            "coolify.type=application"
+            "coolify.type=application|database|search"
           ],
-          "recommended_sections": [
-            "environment",
-            "volumes",
-            "healthcheck",
-            "depends_on"
-          ]
+          "environment_variables": {
+            "pattern": "${VARIABLE_NAME}",
+            "coolify_variables": {
+              "fqdn": "SERVICE_FQDN_NAME_PORT",
+              "url": "${SERVICE_URL_NAME}",
+              "password": "${SERVICE_PASSWORD_NAME}",
+              "password_64": "${SERVICE_PASSWORD_64_NAME}",
+              "user": "${SERVICE_USER_NAME}",
+              "base64": "${SERVICE_BASE64_NAME}",
+              "base64_64": "${SERVICE_BASE64_64_NAME}",
+              "realbase64": "${SERVICE_REALBASE64_NAME}",
+              "realbase64_64": "${SERVICE_REALBASE64_64_NAME}",
+              "setting": "${SERVICE_SETTING_NAME}"
+            },
+            "naming_rules": {
+              "description": "Rules for variable naming in Coolify",
+              "pattern": "${SERVICE_{TYPE}_{NAME}}",
+              "restrictions": [
+                "NAME part should not contain additional underscores",
+                "Example: ${SERVICE_PASSWORD_JWT} is correct, ${SERVICE_PASSWORD_JWT_REFRESH} is incorrect",
+                "For longer passwords, use _64 suffix: ${SERVICE_PASSWORD_64_JWT}"
+              ]
+            },
+            "password_recommendations": {
+              "description": "Guidelines for password variable usage",
+              "standard_passwords": "Use ${SERVICE_PASSWORD_NAME} for regular length passwords",
+              "long_passwords": "Use ${SERVICE_PASSWORD_64_NAME} for passwords requiring higher entropy or longer length",
+              "use_cases": {
+                "standard": [
+                  "Basic authentication",
+                  "API tokens",
+                  "Simple secrets"
+                ],
+                "64_bit": [
+                  "JWT secrets",
+                  "Encryption keys",
+                  "High-security tokens",
+                  "Session secrets"
+                ]
+              }
+            },
+            "api_key_management": {
+              "description": "Best practices for API key configuration",
+              "pattern": "${SERVICE_SETTING_NAME}",
+              "examples": [
+                "OPENAI_API_KEY=${SERVICE_SETTING_OPENAI}",
+                "ANTHROPIC_API_KEY=${SERVICE_SETTING_ANTHROPIC}",
+                "GOOGLE_KEY=${SERVICE_SETTING_GOOGLE}"
+              ],
+              "fallback_pattern": "${VARIABLE_NAME:-default_value}",
+              "quotes_required": true
+            }
+          }
         }
       }
     },
     {
-      "name": "environment_variables",
-      "description": "Use Coolify UI variables pattern",
-      "pattern": "${VARIABLE_NAME}"
+      "name": "healthcheck_format",
+      "description": "Standard format for healthchecks",
+      "pattern": {
+        "test": {
+          "format": [
+            "CMD",
+            "command",
+            "args"
+          ],
+          "quotes_required": true,
+          "recommended_intervals": {
+            "interval": "5s",
+            "timeout": "10s",
+            "retries": 3
+          }
+        }
+      }
     },
     {
       "name": "security_checks",
@@ -29,7 +90,8 @@
       "forbidden_patterns": [
         "password=",
         "secret=",
-        "key="
+        "key=",
+        "token="
       ]
     },
     {
@@ -40,7 +102,8 @@
         "Configuration",
         "Environment Variables",
         "Volumes",
-        "Networking"
+        "Networking",
+        "Custom Docker Options"
       ]
     }
   ],

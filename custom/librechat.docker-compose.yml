@@ -12,7 +12,7 @@ services:
       - MONGO_URI=mongodb://mongodb:27017/LibreChat
       - MEILI_HOST=http://meilisearch:7700
       - MEILI_NO_ANALYTICS=true
-      - MEILI_MASTER_KEY=${SERVICE_PASSWORD_MEILI}
+      - MEILI_MASTER_KEY=${SERVICE_PASSWORD_64_MEILI}
       - RAG_PORT=8000
       - RAG_API_URL=http://rag_api:8000
       - DEBUG_LOGGING=true
@@ -23,13 +23,13 @@ services:
       - ALLOW_SOCIAL_REGISTRATION=${ALLOW_SOCIAL_REGISTRATION:-false}
       - ALLOW_PASSWORD_RESET=${ALLOW_PASSWORD_RESET:-false}
       - ALLOW_UNVERIFIED_EMAIL_LOGIN=${ALLOW_UNVERIFIED_EMAIL_LOGIN:-true}
-      - JWT_SECRET=${SERVICE_PASSWORD_JWT}
-      - JWT_REFRESH_SECRET=${SERVICE_PASSWORD_JWTREFRESH}
-      - CREDS_KEY=${SERVICE_PASSWORD_CREDS}
-      - CREDS_IV=${SERVICE_PASSWORD_CREDSIV}
+      - JWT_SECRET=${SERVICE_PASSWORD_64_JWT}
+      - JWT_REFRESH_SECRET=${SERVICE_PASSWORD_64_JWTREFRESH}
+      - CREDS_KEY=${SERVICE_PASSWORD_64_CREDS}
+      - CREDS_IV=${SERVICE_PASSWORD_64_CREDSIV}
       - SEARCH=true
       - APP_TITLE=${APP_TITLE:-LibreChat}
-      - OPENAI_API_KEY=${OPENAI_API_KEY:-user_provided}
+      - 'OPENAI_API_KEY=${SERVICE_OPENAI_API_KEY:-user_provided}'
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-user_provided}
       - GOOGLE_KEY=${GOOGLE_KEY:-user_provided}
       - BINGAI_TOKEN=${BINGAI_TOKEN:-user_provided}
@@ -40,6 +40,8 @@ services:
       - ANYSCALE_API_KEY=${ANYSCALE_API_KEY:-user_provided}
       - TOGETHERAI_API_KEY=${TOGETHERAI_API_KEY:-user_provided}
       - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY:-user_provided}
+      - 'POSTGRES_PASSWORD=${SERVICE_PASSWORD_POSTGRES}'
+      - 'POSTGRES_DB=${POSTGRES_DB:-vectordb}'
     volumes:
       - librechat-api-images:/app/client/public/images
       - librechat-api-logs:/app/api/logs
@@ -67,7 +69,7 @@ services:
     environment:
       - 'MEILI_NO_ANALYTICS=${MEILI_NO_ANALYTICS:-true}'
       - 'MEILI_ENV=production'
-      - 'MEILI_MASTER_KEY=${SERVICE_PASSWORD_MEILI}'
+      - MEILI_MASTER_KEY=${SERVICE_PASSWORD_64_MEILI}
     volumes:
       - 'meilisearch-data:/meili_data'
     restart: always
@@ -81,29 +83,38 @@ services:
       timeout: 10s
       retries: 15
 
-  vectordb:
+  postgres:
     image: ankane/pgvector:latest
     environment:
-      POSTGRES_DB: mydatabase
-      POSTGRES_USER: myuser
-      POSTGRES_PASSWORD: mypassword
+      - 'POSTGRES_DB=${POSTGRES_DB:-vectordb}'
+      - POSTGRES_USER=$SERVICE_USER_POSTGRES
+      - POSTGRES_PASSWORD=$SERVICE_PASSWORD_POSTGRES
     restart: always
     volumes:
-      - pgdata2:/var/lib/postgresql/data
+      - 'pg-data:/var/lib/postgresql/data'
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - 'pg_isready -h localhost -U $${POSTGRES_USER} -d $${POSTGRES_DB}'
+      interval: 5s
+      timeout: 5s
+      retries: 3
 
   rag_api:
     image: ghcr.io/danny-avila/librechat-rag-api-dev-lite:latest
     environment:
-      - DB_HOST=vectordb
+      - DB_HOST=${POSTGRES_DB:-vectordb}
+      - DB_USER=$SERVICE_USER_POSTGRES
+      - DB_PASSWORD=$SERVICE_PASSWORD_POSTGRES
       - RAG_PORT=8000
-      - OPENAI_API_KEY=${OPENAI_API_KEY:-user_provided}
+      - 'OPENAI_API_KEY=${SERVICE_OPENAI_API_KEY:-user_provided}'
     restart: always
     depends_on:
-      - vectordb
+      - postgres
 
 volumes:
   librechat-api-images:
   librechat-api-logs:
   mongodb-data:
   meilisearch-data:
-  pgdata2:
+  pg-data:
