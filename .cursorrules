@@ -4,6 +4,14 @@
       "name": "compose_file_structure",
       "description": "Standard structure for Coolify compose files",
       "pattern": {
+        "header": {
+          "required_fields": [
+            "# documentation: url",
+            "# slogan: description",
+            "# tags: comma,separated,list",
+            "# port: exposed_port"
+          ]
+        },
         "services": {
           "required_labels": [
             "coolify.managed=true",
@@ -61,6 +69,16 @@
               "fallback_pattern": "${VARIABLE_NAME:-default_value}",
               "quotes_required": true
             }
+          },
+          "dependencies": {
+            "pattern": {
+              "depends_on": {
+                "service_name": {
+                  "condition": "service_healthy"
+                }
+              }
+            },
+            "required": true
           }
         }
       }
@@ -80,6 +98,24 @@
             "interval": "5s",
             "timeout": "10s",
             "retries": 3
+          },
+          "examples": {
+            "web": [
+              "CMD",
+              "wget",
+              "--no-verbose",
+              "--tries=1",
+              "--spider",
+              "http://localhost:PORT/health"
+            ],
+            "database": [
+              "CMD-SHELL",
+              "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"
+            ],
+            "tcp": [
+              "CMD-SHELL",
+              "bash -c ':> /dev/tcp/127.0.0.1/PORT' || exit 1"
+            ]
           }
         }
       }
@@ -91,8 +127,20 @@
         "password=",
         "secret=",
         "key=",
-        "token="
-      ]
+        "token=",
+        "api_key=",
+        "auth=",
+        "credentials="
+      ],
+      "required_patterns": {
+        "volumes": {
+          "named_volumes": true,
+          "bind_mounts": "restricted"
+        },
+        "network_isolation": {
+          "internal_networks": "preferred"
+        }
+      }
     },
     {
       "name": "documentation",
@@ -104,6 +152,12 @@
         "Volumes",
         "Networking",
         "Custom Docker Options"
+      ],
+      "recommended_sections": [
+        "Backup Strategy",
+        "Security Considerations",
+        "Troubleshooting",
+        "Update Process"
       ]
     }
   ],

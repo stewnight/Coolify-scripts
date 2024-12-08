@@ -40,6 +40,49 @@ This repository serves multiple purposes:
 4. Configure environment variables through Coolify's UI
 5. Deploy!
 
+## 📚 Compose File Standards
+
+### File Structure
+
+Each compose file should include:
+
+- Header documentation with links, slogan, tags, and exposed ports
+- Required Coolify labels for service management
+- Proper service dependencies and healthchecks
+- Volume configurations for persistent data
+
+### Environment Variables
+
+Coolify uses specific patterns for environment variables:
+
+- `${SERVICE_FQDN_NAME_PORT}` - Service URLs and ports
+- `${SERVICE_PASSWORD_NAME}` - Standard passwords
+- `${SERVICE_PASSWORD_64_NAME}` - High-entropy passwords/secrets
+- `${SERVICE_USER_NAME}` - Service usernames
+- `${SERVICE_SETTING_NAME}` - API keys and settings
+- `${SERVICE_BASE64_NAME}` - Base64 encoded values
+- `${SERVICE_REALBASE64_NAME}` - True base64 encoded values
+
+### Healthchecks
+
+All services should include standardized healthchecks:
+
+```yaml
+healthcheck:
+  test: ['CMD', 'command', 'args']
+  interval: 5s
+  timeout: 10s
+  retries: 3
+```
+
+### Security Best Practices
+
+- Never commit sensitive data
+- Use Coolify's variable management
+- Follow least privilege principles
+- Implement proper service isolation
+- Use secure defaults
+
 ## 📚 Documentation
 
 ### Database Guides
